@@ -1,0 +1,169 @@
+---
+title: "Missing_data"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+
+---
+## 1. Base de datos
+
+Los datos que utilizaremos corresponden con los pesos y tallas de 159 recién nacidos, las variables son: Sex, Lenght (talla), Weight (peso).
+
+La base de datos se encuentra disponible en:
+
+https://liveuclac-my.sharepoint.com/:f:/g/personal/sejjcog_ucl_ac_uk/Emki-iuqFfdHqIz5v-Hb7TYBF_2Pmkmw3926djYBpKZBYw?e=OcyWlO
+
+
+librerías que vamos a utilizar:
+
+```{r cars, message=FALSE, warning=FALSE}
+#install.packages('mice')
+#install.packages("VIM")
+require(mice)
+require(VIM)
+```
+
+Primero importamos los datos:
+
+```{r}
+library(readxl)
+egdata <- read_excel("~/Desktop/egdata.xlsx")
+head(egdata)
+```
+
+Asignamos etiquetas de la variable sexo:
+
+```{r}
+egdata$Sex<-factor(x=egdata$Sex,levels = c(0,1),labels=c("niña","niño"))
+table(egdata$Sex)
+```
+
+
+## 2. Análisis Exploratorio
+
+El resumen de la base de datos:
+
+```{r}
+summary(egdata)
+```
+
+Al realizar una tabla desagregada por sexo:
+
+```{r message=FALSE, warning=FALSE}
+#install.packages("table1")
+require(table1)
+table1(~ Length  + Weight | Sex, data=egdata)
+```
+
+
+Si analizamos el comportamiento de datos perdidos, encontramos que:
+
+```{r}
+md.pattern(egdata)
+```
+El gráfico anterior muestra que 21 individuos no tiene el dato de peso (13.2%), 10 no tienen dato de talla (6.2%) y 2 no tienen ni peso ni talla (1.2%).
+
+Otro gráfico para observar el comportamiento de missing values:
+
+```{r message=FALSE, warning=FALSE}
+#install.packages("naniar")
+require(naniar)
+vis_miss(egdata)
+```
+
+Ahora, vamos analizar si en el comportamiento de los datos perdidos observados existe un patrón sistemático o está relacionado con otras variables o si este es aleatorio (MCAR).
+
+Primero, se va a crear un indicador de datos perdidos por cada variable de interés:
+
+```{r}
+missing_Length<-is.na(egdata$Length)
+
+missing_Weight<-is.na(egdata$Weight)
+```
+
+El resultado anterior nos guarda objetos de tipo lógicos (True/false) sobre la condición de si el peso o la talla es NA. Esto nos permitirá comparar el promedio del peso en aquellos que no tiene el dato de la talla, y viceversa. 
+
+Para el peso:
+```{r}
+tapply(X=egdata$Weight,INDEX=missing_Length,FUN=mean,na.rm=T)
+```
+
+En el resultado anterior observamos que el peso promedio para los que tienen faltante la talla es superior (diferencia pequeña) respecto a los que tienen el dato.
+
+Para la talla:
+```{r}
+tapply(X=egdata$Length,INDEX=missing_Weight,FUN=mean,na.rm=T)
+```
+
+Mientras que, para los que no tienen el dato de peso, la talla promedio es inferior (diferencia pequeña) comparados con los que si tienen los datos completos.
+
+Para no hablar de diferencias pequeñas o grandes se calcularán pruebas de significancia estadística para comparar estos promedios.
+
+```{r}
+t.test(egdata$Weight~missing_Length)
+```
+
+De acuerdo con el valor p, la diferencia del peso promedio entre quienes tienen el dato de talla y no lo tienen No es significativa  estadísticamente (valorp>0.05).
+
+```{r}
+t.test(egdata$Length~missing_Weight)
+```
+Asi mismo, en la comparación de talla promedio entre los que tienen el dato de peso y no lo tienen la diferencia no resulta ser significativa (valorp>0.05).
+
+Para determinar si existe una relación entre los datos perdidos y el sexo, se calculará una prueba chi2. Para talla:
+
+
+```{r}
+tbl_Length<-table(egdata$Sex,missing_Length)
+prop.table(tbl_Length,margin = 1)
+chisq.test(tbl_Length)
+```
+
+Lo anterior muestra que, no existe relación entre los missing de talla y el sexo, aunque el porcentaje de perdidos en niñas sea mayor este no es significativo.
+
+El mismo proceso para peso:
+
+```{r}
+tbl_Weight<-table(egdata$Sex,missing_Weight)
+prop.table(tbl_Weight,margin=1)
+chisq.test(tbl_Weight)
+```
+
+De igual forma, no existe relación entre los datos perdidos de peso y el sexo, la proporción de datos missing en niños y niñas es casi la misma.
+
+
+## 3. Imputación de datos usando el promedio
+
+Uno de los métodos más básicos en imputación es a través de la estimación del promedio, que es reemplazar los datos perdidos por el promedio bajo el supuesto de que los missing se generan de forma aleatoria y no sistemática o sesgada. 
+
+```{r}
+Mean_egdata <- mice(egdata, m=1, method = 'mean')
+MeanData_egdata<-complete(data=Mean_egdata)
+```
+La función *complete* se usa para crear un nuevo dataframe que contiene los valores observados e imputados.
+
+datos de talla con NA´s:
+
+```{r}
+Mean_egdata$data$Length
+```
+
+datos para talla imputados:
+
+```{r}
+Mean_egdata$imp$Length
+```
+
+Finalmente, al comparar el peso entre niños y niñas usando los datos imputados se observa que no existen diferencia significativas:
+
+```{r}
+t.test(data=MeanData_egdata,Weight~Sex)
+```
+Asi mismo, no cambian los resultados sin imputar:
+
+```{r}
+t.test(data=egdata,Weight~Sex)
+```
+
+Ejemplo tomado del Dr Chibueze Ogbonnaya.

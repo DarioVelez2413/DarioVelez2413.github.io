@@ -1,0 +1,49 @@
+---
+title: "Missing_data"
+author: "Javeriana"
+date: "2023-08-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+setwd("D:/DARIO V/MAESTRIA/CLASES/Métodos y simulación/Datos R")
+
+Vivienda_Faltantes <- read.csv("./vivienda_faltantes.csv", sep=",")
+#clase de objeto a estudiar
+class(Vivienda_Faltantes)
+#numero de reguistros y numero de variables
+dim(Vivienda_Faltantes)
+#nombres de las variables
+names(Vivienda_Faltantes)
+#numero de registros completos
+complete.cases(Vivienda_Faltantes)
+registro_Completos <- complete.cases(Vivienda_Faltantes)#
+#clase de objeto
+class(registro_Completos)
+#creaciones de tablas reguistros completosn cuatos verdaderos y cuantos faltos
+table (registro_Completos)
+#formas de mostrar lines de la data
+Vivienda_Faltantes[1:5, ]
+head(x=Vivienda_Faltantes , n=10)
+#Datos no completos#!signo de nagacion
+Vivienda_Faltantes[!registro_Completos, ]
+#valor mas altos
+Vivienda_Faltantes[Vivienda_Faltantes$preciom > 1000, ]
+#valores mas altos con condicion estrato 6
+Vivienda_Faltantes[(Vivienda_Faltantes$preciom > 1000) & (Vivienda_Faltantes$estrato ==6), ]
+#operacion una O otra 
+Vivienda_Faltantes[(Vivienda_Faltantes$preciom > 1000) | (Vivienda_Faltantes$estrato <=6), ]
+#diferencias
+Vivienda_Faltantes[(Vivienda_Faltantes$preciom > 1000) & (Vivienda_Faltantes$tipo != "Casa"), ]
+#ordenar por valor
+Vivienda_Faltantes[order(Vivienda_Faltantes$preciom, decreasing = TRUE), ]
+#grafico
+plot(x=Vivienda_Faltantes$preciom,
+     Y=Vivienda_Faltantes$estrato)
+
+
+```
+
